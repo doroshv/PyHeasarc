@@ -1,0 +1,26 @@
+The main purpose of this module is to provide batch access to
+http://heasarc.nasa.gov/ catalogue database from within python scripts. It
+can be used, however as standalone tool as well. the call sequence is:
+
+browse_extract table, position, radius=30, output="text_table|pdf",
+resolver="SIMBAD|NED",Time="", max_results=100, fields="Standard",
+order_by="", params="", coordsys='equatorial|galactic', equinox="2000|1950", GIFsize=0
+
+where "parameter=XX" means that it is optional and defaults to XX value.
+Required parameters are "table" and "position", and they shall be
+specified as table="XX", i.e. via standard syntax. Position may be given
+as name of the source or as coordinate string (standard heasarc
+conventions). List of tables and their descriptions may be obtained at
+
+http://heasarc.nasa.gov/db-perl/W3Browse/w3catindex.pl
+** note that pdf output uses latex, so pdflatex and several commonly installed
+packages have to be available
+
+See couple of examples below:
+1)To create a pdf with table listing all X-ray pulsars which exhibit a Cyclotron line in their spectra,
+ordered py spin period use:
+./browse_extract.py hmxbcat "GX 301-2" -radius 1e8 -params "xray_type=*C*" -fields "name,ra,dec,porb,pulse_per" -order_by pulse_per -out pdf="test.pdf"
+
+2)To display on screen observation ids,exposure and PI name for  Crab observations by RXTE in 2007 type
+
+./browse_extract.py xtemaster Crab -fields "obsid,exposure,pi_lname" -order_by exposure -time "2007-01-01..2007-12-31" -params='exposure>0' -out text_table
