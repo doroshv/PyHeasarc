@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# encoding: utf-8
+
+"""
+Created by Victor Doroshenko on 2011-01-21.
+Copyright (c) 2011 IAAT, Tuebingen, Germany. All rights reserved.
+Feel free to contribute to the project.
+"""
 import urllib
 import VOTable
 import sys
