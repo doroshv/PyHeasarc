@@ -17,12 +17,12 @@ class heasarq(object):
     """Representation of heasarc query"""
     def __init__(self, table, position, radius=30, resolver="SIMBAD",time="",max_results=100,
     fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0):
-        self.table=table
-        self.position=position
-        self.radius=radius
-        self.resolver=resolver
+        self.table=str(table)
+        self.position=str(position)
+        self.radius=int(radius)
+        self.resolver=str(resolver)
         self.time=time
-        self.max_results=max_results
+        self.max_results=int(max_results)
         self.gifsize=gifsize
         self.equinox=equinox
         self.order = order_by.lower()
