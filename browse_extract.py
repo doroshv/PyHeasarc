@@ -16,7 +16,7 @@ from numpy import array, float64
 class heasarq(object):
     """Representation of heasarc query"""
     def __init__(self, table, position, radius=30, resolver="SIMBAD",time="",max_results=100,
-    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0):
+    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc'):
         self.table=str(table)
         self.position=str(position)
         self.radius=int(radius)
@@ -27,6 +27,11 @@ class heasarq(object):
         self.equinox=equinox
         self.order = order_by.lower()
         self.params = params
+        if host == 'heasarc':
+            # http://www.isdc.unige.ch/browse/w3query.pl
+            self.host = 'heasarc.gsfc.nasa.gov/db-perl/W3Browse'
+        elif host == 'isdc':
+            self.host = 'www.isdc.unige.ch/browse'
         if coordsys.lower()=='equatorial':
             self.coordsys="Equatorial: R.A. Dec"
         else:
@@ -60,11 +65,23 @@ class heasarq(object):
                 entry = re.findall('(.*?)([><=\*].*)',par)[0]
                 # print entry
                 querydic['bparam_'+entry[0].strip()]=entry[1].strip().replace('=','')
-        self.url='http://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl?'+\
+        self.url='http://'+self.host+'/w3query.pl?'+\
             urllib.urlencode(querydic)
         if addvaron:
             self.url+='&varon='+'&varon=+'.join(fields.replace(',',' ').replace(';',' ').split())
+        # print self.url
+        # import re
         f=urllib.urlopen(self.url)
+        # xmltext = re.sub(u"[^\x20-\x7f]+",u"",f.read())
+        xmltext = f.read().strip()
+        f.close()
+        import os
+        tn = os.tmpnam()
+        # print tn
+        ff = open(tn,'w')
+        ff.write(xmltext)
+        ff.close()
+        f = open(tn,'r')
         try:
             vot=VOTable.VOTable(source=f)
         except:
@@ -81,7 +98,7 @@ class heasarq(object):
                 g=f
                 if f=='class': g=f+'_name'
                 if len(data)>=self.vot.getColumnIdx(f) and len(data)>0:
-                    setattr(self,g,(self.desc[f],self.flotify(data[self.vot.getColumnIdx(f)])))
+                    setattr(self,g,(self.desc[f],self.floatify(data[self.vot.getColumnIdx(f)])))
                 else:
                     setattr(self,g,(self.desc[f],[]))
         
@@ -89,12 +106,19 @@ class heasarq(object):
     def transposed(self,lists):
         if not lists: return []
         return map(lambda *row: list(row), *lists)
-    def flotify(self,x,dtype=float64):
-        """take an array and if possible convert it to dtype"""
-        try:
-            return array(x, dtype=dtype) 
-        except:
-            return array(x)
+    def floatify(self,lists):
+        from numpy import vectorize, nan, where, isnan
+        def vv(x):
+            """docstring for vv"""
+            try:
+                return float(x) if ('.' in x or 'e' in x.lower()) else int(x)
+            except:
+                return nan
+        res = vectorize(vv)(lists)
+        if len(where(isnan(res))[0])>=0.5*len(res):
+            return lists
+        else:
+            return res
     def pprint_text(self,outfile=sys.stdout,print_offset=False):
         """pretty print results as a text (tab-padded) table to screen or file (if filename is specified)"""
         out = []
@@ -223,6 +247,11 @@ if __name__ == '__main__':
     conventions). List of tables and their descriptions may be obtained at
     
     http://heasarc.nasa.gov/db-perl/W3Browse/w3catindex.pl
+    
+    there is also a possibility to query ISDC tables (set host='isdc')
+    index of table is available at 
+    http://www.isdc.unige.ch/integral/archive
+
     ** note that pdf output uses latex, so pdflatex and several commonly installed
     packages have to be available
     """
