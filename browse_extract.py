@@ -280,7 +280,6 @@ if __name__ == '__main__':
     parser.add_argument('-gifsize',default=0,help="Size of gifs outputed by previews (not functioning now)")
     parser.add_argument('-convert_fields',action="store_true", default=False, help="if present the numerical fields will be converted (if they are numerical) to numpy arrays")
     args = parser.parse_args()
-    print args
     d=args.__dict__
     out = d.pop('output')
     res = heasarc(**d)
