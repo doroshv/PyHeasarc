@@ -16,7 +16,7 @@ from numpy import array, float64
 class heasarq(object):
     """Representation of heasarc query"""
     def __init__(self, table, position, radius=30, resolver="SIMBAD",time="",max_results=100,
-    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc'):
+    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc', convert_fields=True):
         self.table=str(table)
         self.position=str(position)
         self.radius=int(radius)
@@ -27,6 +27,7 @@ class heasarq(object):
         self.equinox=equinox
         self.order = order_by.lower()
         self.params = params
+        self.convert_fields = convert_fields
         if host == 'heasarc':
             # http://www.isdc.unige.ch/browse/w3query.pl
             self.host = 'heasarc.gsfc.nasa.gov/db-perl/W3Browse'
@@ -76,19 +77,22 @@ class heasarq(object):
         xmltext = f.read().strip()
         f.close()
         import os
-        tn = os.tmpnam()
+        ff = os.tmpfile()
         # print tn
-        ff = open(tn,'w')
+        # ff = open(tn,'w')
         ff.write(xmltext)
-        ff.close()
-        f = open(tn,'r')
+        ff.flush()
+        ff.seek(0)
+        # f = open(tn,'r')
+        # f = 
         try:
-            vot=VOTable.VOTable(source=f)
+            vot=VOTable.VOTable(source=ff)
+            ff.close()
         except:
             print "Error parsing your query! Check your query, availability of requested fields in requested table and if heasarc is online"
             vot=False
         self.vot=vot
-        f.close()
+        # f.close()
         if self.vot:
             data=self.transposed([self.vot.getData(x) for x in self.vot.getDataRows()])
             self.desc=dict([(str(x.name),str(self.vot.getData(x)[0])) for x in self.vot.getFields()])
@@ -98,7 +102,13 @@ class heasarq(object):
                 g=f
                 if f=='class': g=f+'_name'
                 if len(data)>=self.vot.getColumnIdx(f) and len(data)>0:
-                    setattr(self,g,(self.desc[f],self.floatify(data[self.vot.getColumnIdx(f)])))
+                    print self.convert_fields
+                    if self.convert_fields:
+                        # print "set to true", self.convert_fields
+                        setattr(self,g,(self.desc[f],self.floatify(data[self.vot.getColumnIdx(f)])))
+                    else:
+                        # print "set to false"
+                        setattr(self,g,(self.desc[f],data[self.vot.getColumnIdx(f)]))
                 else:
                     setattr(self,g,(self.desc[f],[]))
         
@@ -115,7 +125,7 @@ class heasarq(object):
             except:
                 return nan
         res = vectorize(vv)(lists)
-        if len(where(isnan(res))[0])>=0.5*len(res):
+        if len(where(isnan(res))[0])>=0.9*len(res):
             return lists
         else:
             return res
@@ -178,11 +188,13 @@ class heasarq(object):
         \\end{document}
         """
         print >> tmp, latex
+        tmp.flush()
         tmp.close()
+        del tmp
         import os
         os.system('pdflatex -interaction=batchmode tmp_bre.tex >/dev/null')
         os.system('mv tmp_bre.pdf '+outfile)
-        os.system('rm -f tmp_bre*')
+        # os.system('rm -f tmp_bre*')
         import glob
         return glob.glob(outfile)
 
@@ -193,7 +205,7 @@ def format_num(num):
     Adds commas, etc.
     
     Will truncate floats into ints!"""
-
+    import locale
     try:
         inum = int(num)
         return locale.format("%.*f", (0, inum), True)
@@ -279,7 +291,9 @@ if __name__ == '__main__':
     parser.add_argument('-coordsys',default='equatorial', help="Coordinate system, can be equatorial or galactic")
     parser.add_argument('-equinox',default=2000, help="Epoch for coordinates, can be 1950 or 2000")
     parser.add_argument('-gifsize',default=0,help="Size of gifs outputed by previews (not functioning now)")
+    parser.add_argument('-convert_fields',action="store_true", default=False, help="if present the numerical fields will be converted (if they are numerical) to numpy arrays")
     args = parser.parse_args()
+    print args
     d=args.__dict__
     out = d.pop('output')
     res = heasarc(**d)
