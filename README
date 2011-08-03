@@ -1,25 +1,79 @@
 The main purpose of this module is to provide batch access to
-http://heasarc.nasa.gov/ catalogue database from within python scripts. It
-can be used, however as standalone tool as well. the call sequence is:
+http://heasarc.nasa.gov/ catalogue database from within python scripts. It can
+also be used to query ISDC archive, which use same underlying database
+structure (http://www.isdc.unige.ch/integral/archive, see "all-tables" link
+for list of tables which you may query). The module may be also used as
+standalone tool to query databases from command line or from within your shell
+scripts. The call sequence for python is:
 
-browse_extract table, position, radius=30, output="text_table|pdf",
+browse_extract(table, position, radius=30, output="text_table|pdf",
 resolver="SIMBAD|NED",Time="", max_results=100, fields="Standard",
-order_by="", params="", coordsys='equatorial|galactic', equinox="2000|1950", GIFsize=0
+order_by="", params="", coordsys='equatorial|galactic', equinox="2000|1950",
+GIFsize=0, convert_fields=True)
 
 where "parameter=XX" means that it is optional and defaults to XX value.
-Required parameters are "table" and "position". Position may be given
-as name of the source or as coordinate string (standard heasarc
-conventions). List of tables and their descriptions may be obtained at
+Required parameters are "table" and "position". Position may be given as name
+of the source or as coordinate string (standard heasarc conventions). List of
+tables and their descriptions may be obtained at
+http://heasarc.nasa.gov/db-perl/W3Browse/w3catindex.pl (host='heasarc',default), 
+and http://www.isdc.unige.ch/integral/archive (host='isdc')
 
-http://heasarc.nasa.gov/db-perl/W3Browse/w3catindex.pl
 ** note that pdf output uses latex, so pdflatex and several commonly installed
 packages have to be available
 
-Optional arguments are specified as -argument value. See couple of examples below:
-1)To create a pdf with table listing all X-ray pulsars which exhibit a Cyclotron line in their spectra,
-ordered py spin period use:
+For command line usage optional arguments are specified as -argument value.
+See couple of examples below:
+
+1)To create a pdf with table listing all X-ray pulsars which exhibit a
+Cyclotron line in their spectra, ordered py spin period use:
+
 ./browse_extract.py hmxbcat "GX 301-2" -radius 1e8 -params "xray_type=*C*" -fields "name,ra,dec,porb,pulse_per" -order_by pulse_per -out pdf="test.pdf"
 
-2)To display on screen observation ids,exposure and PI name for  Crab observations by RXTE in 2007 type
+2)To display on screen observation ids,exposure and PI name for Crab
+observations by RXTE in 2007 type
 
 ./browse_extract.py xtemaster Crab -fields "obsid,exposure,pi_lname" -order_by exposure -time "2007-01-01..2007-12-31" -params='exposure>0' -out text_table
+
+Obviously more advanced usage is possible from within python scripts. As an
+example, here's a short script to remotely access standard RXTE lightcurves of
+a given source:
+
+import browse_extract as b
+import pylab as p
+import pyfits
+
+# name your favorite source
+
+source = 'GX 301-2'
+# get list of all obsids with source in FOV
+obsids = b.heasarc('xtemaster',source,fields='obsid').obsid[1]
+
+# pick first one and get proposal id (need to find in which AO observation occured)
+our_obsid = obsids[0]
+pid = our_obsid[:5]
+
+# calculate ao number
+ao = int(pid[:2])<90 and 'AO'+pid[0:1] or 'AO'+str(9+int(pid[1:2]))
+
+# make path to lightcurve
+path = ("ftp://legacy.gsfc.nasa.gov/xte/data/archive/"+
+		ao+"/"+ "P"+pid+"/"+our_obsid+"/stdprod/xp"+
+		our_obsid.replace('-','')+"_s2b.lc.gz")
+
+# get mjd time + rate and error of source lightcurve in "B" energy range
+
+time = pyfits.getval(path,'mjdrefi',1)+pyfits.getval(path,'mjdreff',1)+\
+	   pyfits.getdata(path,1).field('time')/86400.
+rate = pyfits.getdata(path,1).field('rate')
+err  = pyfits.getdata(path,1).field('error')
+
+p.title('RXTE PCA lightcurve for '+ source+',\n data from observation '+our_obsid)
+p.errorbar(time,rate,err,ls='steps-mid',c='k')
+p.xlabel('Time, MJD')
+p.ylabel('RXTE PCA rate, cts/s')
+p.show()
+
+
+
+
+

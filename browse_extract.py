@@ -43,7 +43,6 @@ class heasarq(object):
         else:
             self.fields=fields
             addvaron=True
-        # print self.fields
         querydic={"tablehead":"",\
                   "Action":"Query",\
                   "Coordinates":self.coordsys,\
@@ -61,30 +60,21 @@ class heasarq(object):
             querydic['sortvar']=self.order
         if self.params:
             paramlist = self.params.split(',')
-            # print paramlist
             for par in paramlist:
                 entry = re.findall('(.*?)([><=\*].*)',par)[0]
-                # print entry
                 querydic['bparam_'+entry[0].strip()]=entry[1].strip().replace('=','')
         self.url='http://'+self.host+'/w3query.pl?'+\
             urllib.urlencode(querydic)
         if addvaron:
             self.url+='&varon='+'&varon=+'.join(fields.replace(',',' ').replace(';',' ').split())
-        # print self.url
-        # import re
         f=urllib.urlopen(self.url)
-        # xmltext = re.sub(u"[^\x20-\x7f]+",u"",f.read())
         xmltext = f.read().strip()
         f.close()
         import os
         ff = os.tmpfile()
-        # print tn
-        # ff = open(tn,'w')
         ff.write(xmltext)
         ff.flush()
         ff.seek(0)
-        # f = open(tn,'r')
-        # f = 
         try:
             vot=VOTable.VOTable(source=ff)
             ff.close()
@@ -102,12 +92,9 @@ class heasarq(object):
                 g=f
                 if f=='class': g=f+'_name'
                 if len(data)>=self.vot.getColumnIdx(f) and len(data)>0:
-                    print self.convert_fields
                     if self.convert_fields:
-                        # print "set to true", self.convert_fields
                         setattr(self,g,(self.desc[f],self.floatify(data[self.vot.getColumnIdx(f)])))
                     else:
-                        # print "set to false"
                         setattr(self,g,(self.desc[f],data[self.vot.getColumnIdx(f)]))
                 else:
                     setattr(self,g,(self.desc[f],[]))
