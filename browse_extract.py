@@ -16,7 +16,7 @@ from numpy import array, float64
 class heasarq(object):
     """Representation of heasarc query"""
     def __init__(self, table, position, radius=30, resolver="SIMBAD",time="",max_results=100,
-    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc', convert_fields=True):
+    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc', convert_fields=True,print_offset=False):
         self.table=str(table)
         self.position=str(position)
         self.radius=int(radius)
@@ -26,8 +26,9 @@ class heasarq(object):
         self.gifsize=gifsize
         self.equinox=equinox
         self.order = order_by.lower()
-        self.params = params
+        self.params = params.lower()
         self.convert_fields = convert_fields
+        self.print_offset=print_offset
         if host == 'heasarc':
             # http://www.isdc.unige.ch/browse/w3query.pl
             self.host = 'heasarc.gsfc.nasa.gov/db-perl/W3Browse'
@@ -41,7 +42,8 @@ class heasarq(object):
             self.fields=fields.capitalize() # do varon reconstruction
             addvaron=False
         else:
-            self.fields=fields
+            # print fields==fields.lower()
+            self.fields=fields.lower()
             addvaron=True
         querydic={"tablehead":"",\
                   "Action":"Query",\
@@ -66,7 +68,7 @@ class heasarq(object):
         self.url='http://'+self.host+'/w3query.pl?'+\
             urllib.urlencode(querydic)
         if addvaron:
-            self.url+='&varon='+'&varon=+'.join(fields.replace(',',' ').replace(';',' ').split())
+            self.url+='&varon='+'&varon=+'.join(self.fields.replace(',',' ').replace(';',' ').split())
         f=urllib.urlopen(self.url)
         xmltext = f.read().strip()
         f.close()
@@ -116,7 +118,7 @@ class heasarq(object):
             return lists
         else:
             return res
-    def pprint_text(self,outfile=sys.stdout,print_offset=False):
+    def pprint_text(self,outfile=sys.stdout, print_offset=False):
         """pretty print results as a text (tab-padded) table to screen or file (if filename is specified)"""
         out = []
         closef=False
@@ -126,6 +128,7 @@ class heasarq(object):
         k = self.fields.split(',')
         if not print_offset:
             try:
+                # print "removing offset"
                 k.remove('Search_Offset')
             except:
                 pass
@@ -167,7 +170,7 @@ class heasarq(object):
         \\begin{landscape}
         \\begin{longtable}{"""
         # print latex
-        latex+=('p{'+str(int(21./len(out[0])))+'cm}|')*len(out[0])+"}\n"
+        latex+=('|p{'+str(int(21./len(out[0])))+'cm}|')*len(out[0])+"}\n"
         latex+="\\\\\n\\hline".join(["\t&\t".join(y) for y in out])+'\\\\'
         latex+="""\\
         \\end{longtable}
@@ -279,6 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('-equinox',default=2000, help="Epoch for coordinates, can be 1950 or 2000")
     parser.add_argument('-gifsize',default=0,help="Size of gifs outputed by previews (not functioning now)")
     parser.add_argument('-convert_fields',action="store_true", default=False, help="if present the numerical fields will be converted (if they are numerical) to numpy arrays")
+    parser.add_argument('-print_offset',action="store_true", default=False, help="print distance from specified position")
     args = parser.parse_args()
     d=args.__dict__
     out = d.pop('output')
@@ -286,15 +290,16 @@ if __name__ == '__main__':
     if res.vot:
         if out.find('text_table')==0:
             if len(out.split('=')):
-                res.pprint_text()
+                res.pprint_text(print_offset=d['print_offset'])
             else:
                 fn = out.split('=')[-1]
-                res.pprint_text(open(fn,'w'))
+                res.pprint_text(open(fn,'w'),print_offset=d['print_offset'])
         elif out.find('pdf')==0:
             if len(out.split('='))!=2:
                 print "Pleace specify name for pdf output like -output pdf=file.pdf"
             else:
-                res.pprint_pdf(out.split('=')[-1])
+                # print d['print_offset']
+                res.pprint_pdf(out.split('=')[-1],print_offset=d['print_offset'])
         else:
             print "Check calling sequence"
     else:
