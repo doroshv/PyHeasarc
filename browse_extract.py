@@ -42,7 +42,6 @@ class heasarq(object):
             self.fields=fields.capitalize() # do varon reconstruction
             addvaron=False
         else:
-            # print fields==fields.lower()
             self.fields=fields.lower()
             addvaron=True
         querydic={"tablehead":"",\
@@ -126,6 +125,8 @@ class heasarq(object):
             outfile=open(outfile,'w')
             closef = True
         k = self.fields.split(',')
+        if 'Search_Offset' not in k:
+            k+=['Search_Offset']    
         if not print_offset:
             try:
                 # print "removing offset"
@@ -146,6 +147,8 @@ class heasarq(object):
         out=[]
         tmp = open('tmp_bre.tex','w')
         k = self.fields.split(',')
+        if 'Search_Offset' not in k:
+            k+=['Search_Offset']
         # print self.fields
         if not print_offset:
             try:
