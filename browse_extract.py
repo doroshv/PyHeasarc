@@ -6,7 +6,7 @@ Created by Victor Doroshenko on 2011-01-21.
 Copyright (c) 2011 IAAT, Tuebingen, Germany. All rights reserved.
 Feel free to contribute to the project.
 """
-import urllib
+import urllib, socket
 import VOTable
 import sys
 import re
@@ -16,7 +16,8 @@ from numpy import array, float64
 class heasarq(object):
     """Representation of heasarc query"""
     def __init__(self, table, position, radius=30, resolver="SIMBAD",time="",max_results=100,
-    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc', convert_fields=True,print_offset=False):
+    fields="Standard", order_by="", params="", coordsys='equatorial', equinox="2000", gifsize=0, host='heasarc', convert_fields=True,print_offset=False,timeout=30):
+        socket.setdefaulttimeout(timeout)
         self.table=str(table)
         self.position=str(position)
         self.radius=int(radius)
@@ -26,7 +27,7 @@ class heasarq(object):
         self.gifsize=gifsize
         self.equinox=equinox
         self.order = order_by.lower()
-        self.params = params.lower()
+        self.params = params
         self.convert_fields = convert_fields
         self.print_offset=print_offset
         if host == 'heasarc':
@@ -80,13 +81,19 @@ class heasarq(object):
             vot=VOTable.VOTable(source=ff)
             ff.close()
         except:
+            print self.url
             print "Error parsing your query! Check your query, availability of requested fields in requested table and if heasarc is online"
             vot=False
         self.vot=vot
         # f.close()
         if self.vot:
             data=self.transposed([self.vot.getData(x) for x in self.vot.getDataRows()])
-            self.desc=dict([(str(x.name),str(self.vot.getData(x)[0])) for x in self.vot.getFields()])
+            # print self.vot.getFields()
+            def fi_arr(x):
+                """docstring for fi_arr"""
+                if len(x)==1: return x[0]
+                return ""
+            self.desc=dict([(str(x.name),str(fi_arr(self.vot.getData(x)))) for x in self.vot.getFields()])
             if self.fields.lower()=='standard' or self.fields.lower()=='all':
                 self.fields=",".join(self.desc.keys())
             for f in self.desc.keys():
