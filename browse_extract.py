@@ -20,7 +20,7 @@ class heasarq(object):
         socket.setdefaulttimeout(timeout)
         self.table=str(table)
         self.position=str(position)
-        self.radius=int(radius)
+        self.radius=radius
         self.resolver=str(resolver)
         self.time=time
         self.max_results=int(max_results)
